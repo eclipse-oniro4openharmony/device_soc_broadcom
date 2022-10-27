@@ -1,0 +1,16 @@
+
+if (!defined(defines)) {
+  defines = []
+}
+camera_product_name_path = "//vendor/rpi3"
+camera_device_name_path = "//device/soc/broadcom/common/hal/media"
+is_support_v4l2 = true
+if (is_support_v4l2) {
+  is_support_mpi = false
+  defines += [ "SUPPORT_V4L2" ]
+  chipset_build_deps = "$camera_device_name_path/camera:chipset_build"
+  camera_device_manager_deps =
+      "$camera_device_name_path/camera/src/device_manager:camera_device_manager"
+  camera_pipeline_core_deps =
+      "$camera_device_name_path/camera/src/pipeline_core:camera_pipeline_core"
+}

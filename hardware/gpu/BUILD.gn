@@ -1,0 +1,51 @@
+import("//build/ohos.gni")
+import("//build/ohos/ndk/ndk.gni")
+
+config("mesa3d-common_config") {
+    include_dirs = [ "include" ]
+}
+
+mesa3d_common_prebuilts = [
+    "libgbm.so.1",
+    "libEGL.so.1",
+    "libglapi.so.0",
+    "libGLESv1_CM.so.1",
+    "libGLESv2.so.2",
+]
+
+mesa3d_common_deps = []
+
+foreach(file, mesa3d_common_prebuilts) {
+    target = "mesa3d-common-$file"
+    ohos_prebuilt_shared_library(target) {
+        source = "lib/$file"
+        part_name = "raspberrypi_products"
+        install_enable = true
+        public_configs = [ ":mesa3d-common_config" ]
+    }
+    mesa3d_common_deps += [ ":$target" ]
+}
+
+group("mesa3d-common") {
+    mesa3d_common_deps += [ ":glmark2-es2-drm" ]
+    deps = mesa3d_common_deps
+}
+
+ohos_prebuilt_shared_library("vc4_dri") {
+    source = "lib/vc4_dri.so"
+    part_name = "raspberrypi_products"
+    install_enable = true
+}
+
+ohos_prebuilt_shared_library("v3d_dri") {
+    source = "lib/v3d_dri.so"
+    part_name = "raspberrypi_products"
+    install_enable = true
+}
+
+ohos_prebuilt_executable("glmark2-es2-drm") {
+    source = "test/glmark2-es2-drm"
+    install_images = [ "system" ]
+    part_name = "raspberrypi_products"
+    install_enable = true
+}
