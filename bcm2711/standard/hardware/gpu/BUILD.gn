@@ -1,0 +1,95 @@
+import("//build/ohos.gni")
+import("//build/ohos/ndk/ndk.gni")
+
+ohos_prebuilt_shared_library("mesa_egl") {
+    source = "lib/libEGL.so.1.0.0"
+    install_enable = true
+    part_name = "raspberrypi_products"
+    install_images = [ chipset_base_dir ]
+    relative_install_dir = "chipsetsdk"
+    symlink_target_name = [
+        "libEGL.so",
+        "libEGL_impl.so",
+    ]
+}
+
+ohos_prebuilt_shared_library("mesa_gbm") {
+    source = "lib/libgbm.so.1.0.0"
+    install_enable = true
+    part_name = "raspberrypi_products"
+    install_images = [ chipset_base_dir ]
+    relative_install_dir = "chipsetsdk"
+    symlink_target_name = [
+        "libgbm.so.1",
+        "libgbm.so",
+    ]
+}
+
+ohos_prebuilt_shared_library("mesa_glapi") {
+    source = "lib/libglapi.so.0.0.0"
+    install_enable = true
+    part_name = "raspberrypi_products"
+    install_images = [ chipset_base_dir ]
+    relative_install_dir = "chipsetsdk"
+    symlink_target_name = [
+        "libglapi.so.0",
+        "libglapi.so",
+    ]
+}
+
+ohos_prebuilt_shared_library("mesa_glesv1") {
+    source = "lib/libGLESv1_CM.so.1.1.0"
+    install_enable = true
+    part_name = "raspberrypi_products"
+    install_images = [ chipset_base_dir ]
+    relative_install_dir = "chipsetsdk"
+    symlink_target_name = [
+        "libGLESv1.so",
+        "libGLESv1_impl.so",
+    ]
+}
+
+ohos_prebuilt_shared_library("mesa_glesv2") {
+    source = "lib/libGLESv2.so.2.0.0"
+    install_enable = true
+    part_name = "raspberrypi_products"
+    install_images = [ chipset_base_dir ]
+    relative_install_dir = "chipsetsdk"
+    symlink_target_name = [
+        "libGLESv2.so",
+        "libGLESv2_impl.so",
+        "libGLESv3.so",
+        "libGLESv3_impl.so",
+    ]
+}
+
+ohos_prebuilt_shared_library("libgallium_dri") {
+    source = "lib/libgallium_dri.so"
+    install_enable = true
+    part_name = "raspberrypi_products"
+    install_images = [ chipset_base_dir ]
+    relative_install_dir = "chipsetsdk"
+    symlink_target_name = [
+        "v3d_dri.so",
+        "vc4_dri.so",
+    ]
+}
+
+ohos_prebuilt_executable("glmark2-es2-ohos") {
+    source = "test/glmark2-es2-ohos"
+    install_images = [ system_base_dir ]
+    part_name = "raspberrypi_products"
+    install_enable = true
+}
+
+group("mesa3d-lib") {
+    deps = [
+        ":mesa_egl",
+        ":mesa_gbm",
+        ":mesa_glapi",
+        ":mesa_glesv1",
+        ":mesa_glesv2",
+        ":libgallium_dri",
+        ":glmark2-es2-ohos",
+    ]
+}
