@@ -11,5 +11,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-usb_default_config_path = "//device/soc/broadcom/bcm2711/standard/hardware/usb/bcm2711/include"
-display_device_hal = "soc/broadcom/bcm2711/standard/hardware"
+usb_default_config_path = "//device/soc/broadcom/bcm2711/hardware/usb/bcm2711/include"
+display_device_hal = "soc/broadcom/bcm2711/hardware"
