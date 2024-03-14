@@ -1,5 +1,0 @@
-group("hardware_group") {
-  deps = [
-   "//device/soc/broadcom/bcm2711/standard/hardware/gpu:mesa3d-lib",
-  ]
-}
