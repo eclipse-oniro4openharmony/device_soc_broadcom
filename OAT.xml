@@ -33,6 +33,8 @@
                 <policyitem type="copyright" name="Shenzhen Kaihong DID Co., Ltd." path=".*" rule="may" group="defaultGroup" filefilter="copyrightPolicyFilter" desc="Developed By Shenzhen Kaihong DID"/> 
                 <policyitem type="copyright" name="Unionman Co., Ltd." path=".*" rule="may" group="defaultGroup" filefilter="copyrightPolicyFilter" desc="Developed By Unionman"/> 
                 <policyitem type="copyright" name="Diemit &lt;598757652@qq.com&gt;" path=".*" rule="may" group="defaultGroup" filefilter="copyrightPolicyFilter" desc="Diemit"/>
+                <policyitem type="copyright" name="by Felix Fietkau &lt;nbd@nbd.name&gt;" path=".*" rule="may" group="defaultGroup" filefilter="copyrightPolicyFilter" desc="by Felix Fietkau"/>
+                <policyitem type="copyright" name="by David Roetzel &lt;david@roetzel.de&gt;" path=".*" rule="may" group="defaultGroup" filefilter="copyrightPolicyFilter" desc="by David Roetzel"/>
                 <policyitem type="copyright" name="Institute of Software, Chinese Academy of Sciences." path=".*" rule="may" group="defaultGroup" filefilter="copyrightPolicyFilter" desc="Developed By ISCAS"/>
                 
                 <policyitem type="license" name="GPL" path=".*" desc="linux kernel adapter codes"/>
