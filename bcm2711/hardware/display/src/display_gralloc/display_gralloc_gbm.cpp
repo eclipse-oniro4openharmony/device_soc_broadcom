@@ -270,6 +270,7 @@ static void InitBufferHandle(struct gbm_bo *bo, int fd, const AllocInfo *info, P
     bufferHandle->height = hdi_gbm_bo_get_height(bo);
     bufferHandle->usage = info->usage;
     // bufferHandle->format = info->format;
+    // DISPLAY_LOGE("dyformat--- %{public}d ", info->format);
     bufferHandle->format = PIXEL_FMT_BGRA_8888;
     bufferHandle->virAddr = nullptr;
     bufferHandle->size = hdi_gbm_bo_get_size(bo);

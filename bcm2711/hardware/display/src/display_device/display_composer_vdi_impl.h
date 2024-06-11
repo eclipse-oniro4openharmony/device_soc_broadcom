@@ -73,6 +73,9 @@ public:
     virtual int32_t SetLayerMaskInfo(uint32_t devId, uint32_t layerId, const MaskInfo maskInfo) override;
     virtual int32_t SetLayerColor(uint32_t devId, uint32_t layerId, const LayerColor& layerColor) override;
 };
+
+extern "C" int32_t GetDumpInfo(std::string& result);
+extern "C" int32_t UpdateConfig(std::string& result);
 } // DISPLAY
 }  // HDI
 }  // OHOS

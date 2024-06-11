@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Unionman Co., Ltd.
+ * Copyright (c) 2024 Diemit <598757652@qq.com>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,29 +15,30 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <fcntl.h>
 #include "display_common.h"
-#include "display_gralloc.h"
 #include "securec.h"
 #include "display_gfx.h"
+#include "v1_0/display_composer_type.h"
+namespace OHOS {
+namespace HDI {
+namespace DISPLAY {
+using namespace OHOS::HDI::Display::Composer::V1_0;
 
 int32_t GfxInitialize(GfxFuncs **funcs)
 {
-    if (funcs == NULL) {
-        DISPLAY_LOGE("%s: funcs is null", __func__);
-        return DISPLAY_NULL_PTR;
-    }
+    DISPLAY_CHK_RETURN((funcs == NULL), DISPLAY_PARAM_ERR, DISPLAY_LOGE("info is null"));
     *funcs = NULL;
-    DISPLAY_LOGI("%s: gfx initialize success", __func__);
     return DISPLAY_SUCCESS;
 }
 
 int32_t GfxUninitialize(GfxFuncs *funcs)
 {
-    if (funcs == NULL) {
-        DISPLAY_LOGE("%s: funcs is null", __func__);
-        return DISPLAY_NULL_PTR;
-    }
+    CHECK_NULLPOINTER_RETURN_VALUE(funcs, DISPLAY_NULL_PTR);
     free(funcs);
-    DISPLAY_LOGI("%s: gfx uninitialize success", __func__);
+    DISPLAY_LOGI("%{public}s: gfx uninitialize success", __func__);
     return DISPLAY_SUCCESS;
 }
+} // namespace DISPLAY
+} // namespace HDI
+} // namespace OHOS
