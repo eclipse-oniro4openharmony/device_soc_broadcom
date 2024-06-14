@@ -19,6 +19,8 @@
 #include <cerrno>
 #include "display_common.h"
 #include "display_gfx.h"
+#include "hitrace_meter.h"
+#include "display_buffer_vdi_impl.h"
 #include "v1_0/display_composer_type.h"
 
 using namespace OHOS::HDI::Display::Composer::V1_0;
@@ -90,7 +92,7 @@ bool HdiGfxComposition::CanHandle(HdiLayer &hdiLayer)
 {
     DISPLAY_LOGD();
     (void)hdiLayer;
-    return valid_;
+    return true;
 }
 
 int32_t HdiGfxComposition::SetLayers(std::vector<HdiLayer *> &layers, HdiLayer &clientLayer)
@@ -99,17 +101,18 @@ int32_t HdiGfxComposition::SetLayers(std::vector<HdiLayer *> &layers, HdiLayer &
     mClientLayer = &clientLayer;
     mCompLayers.clear();
     for (auto &layer : layers) {
-        if (CanHandle(*layer)) {
-            if ((layer->GetCompositionType() != COMPOSITION_VIDEO) &&
-                (layer->GetCompositionType() != COMPOSITION_CURSOR)) {
-                layer->SetDeviceSelect(COMPOSITION_DEVICE);
-            } else {
-                layer->SetDeviceSelect(layer->GetCompositionType());
-            }
-            mCompLayers.push_back(layer);
-        } else {
-            layer->SetDeviceSelect(COMPOSITION_CLIENT);
-        }
+        // if (CanHandle(*layer)) {
+        //     if ((layer->GetCompositionType() != COMPOSITION_VIDEO) &&
+        //         (layer->GetCompositionType() != COMPOSITION_CURSOR)) {
+        //         layer->SetDeviceSelect(COMPOSITION_DEVICE);
+        //     } else {
+        //         layer->SetDeviceSelect(layer->GetCompositionType());
+        //     }
+        //     mCompLayers.push_back(layer);
+        // } else {
+        //     layer->SetDeviceSelect(COMPOSITION_CLIENT);
+        // }
+        layer->SetDeviceSelect(COMPOSITION_CLIENT);
     }
     DISPLAY_LOGD("composer layers size %{public}zd", mCompLayers.size());
     return DISPLAY_SUCCESS;
@@ -183,7 +186,9 @@ int32_t HdiGfxComposition::ClearRect(HdiLayer &src, HdiLayer &dst)
 
 int32_t HdiGfxComposition::Apply(bool modeSet)
 {
+    StartTrace(HITRACE_TAG_HDF, "HDI:DISP:Apply");
     int32_t ret;
+    static std::shared_ptr<IDisplayBufferVdi> g_buffer = nullptr;
     DISPLAY_LOGD("composer layers size %{public}zd", mCompLayers.size());
     for (uint32_t i = 0; i < mCompLayers.size(); i++) {
         HdiLayer *layer = mCompLayers[i];
@@ -195,9 +200,32 @@ int32_t HdiGfxComposition::Apply(bool modeSet)
                     DISPLAY_LOGE("clear layer %{public}d failed", i));
                 break;
             case COMPOSITION_DEVICE:
-                ret = BlitLayer(*layer, *mClientLayer);
-                DISPLAY_CHK_RETURN((ret != DISPLAY_SUCCESS), DISPLAY_FAILURE,
-                    DISPLAY_LOGE("blit layer %{public}d failed ", i));
+                // ret = BlitLayer(*layer, *mClientLayer);
+                // DISPLAY_CHK_RETURN((ret != DISPLAY_SUCCESS), DISPLAY_FAILURE,
+                //     DISPLAY_LOGE("blit layer %{public}d failed ", i));
+                {
+                    if (g_buffer== nullptr) {
+                        IDisplayBufferVdi* dispBuf = new DisplayBufferVdiImpl();
+                        DISPLAY_CHK_RETURN((dispBuf == nullptr), DISPLAY_FAILURE, DISPLAY_LOGE("map dispBuf init failed"));
+                        g_buffer.reset(dispBuf);
+                        DISPLAY_LOGD("map new DisplayBufferVdiImpl");
+                    }
+                    char *clientBuff = (char *)g_buffer->Mmap(mClientLayer->GetCurrentBuffer()->mHandle);
+                    if(clientBuff) {
+                        DISPLAY_LOGD("map in int");
+                        HdiLayerBuffer *hdiLayer = layer->GetCurrentBuffer();
+                        char *layerBuff = (char *)g_buffer->Mmap(hdiLayer->mHandle);
+                        for(int y = 0; y < hdiLayer->GetHeight(); y++) {
+                            memcpy(&clientBuff[mClientLayer->GetCurrentBuffer()->GetStride() * 
+                            (y + layer->GetLayerDisplayRect().y) + layer->GetLayerDisplayRect().x * 4],
+                            (char *)(&layerBuff[hdiLayer->GetStride() * y]), hdiLayer->GetStride());
+                        }
+                        g_buffer->Unmap(hdiLayer->mHandle);
+                        g_buffer->Unmap(mClientLayer->GetCurrentBuffer()->mHandle);
+                    } else {
+                        DISPLAY_LOGD("map in err");
+                    }
+                }
                 break;
             case COMPOSITION_CLIENT:
                 break;
@@ -206,6 +234,7 @@ int32_t HdiGfxComposition::Apply(bool modeSet)
                 break;
         }
     }
+    FinishTrace(HITRACE_TAG_HDF);
     return DISPLAY_SUCCESS;
 }
 } // namespace OHOS
