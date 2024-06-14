@@ -17,7 +17,11 @@
 #include <cinttypes>
 #include <dlfcn.h>
 #include <cerrno>
+#include "display_common.h"
 #include "display_gfx.h"
+#include "v1_0/display_composer_type.h"
+
+using namespace OHOS::HDI::Display::Composer::V1_0;
 
 namespace OHOS {
 namespace HDI {
@@ -56,7 +60,7 @@ int32_t HdiGfxComposition::GfxModuleInit(void)
     }
 
     using InitFunc = int32_t (*)(GfxFuncs **funcs);
-    InitFunc func = reinterpret_cast<InitFunc>(dlsym(mGfxModule, LIB_GFX_FUNC_INIT));
+    InitFunc func = (int32_t (*)(GfxFuncs **funcs))(dlsym(mGfxModule, LIB_GFX_FUNC_INIT));
     if (func == nullptr) {
         DISPLAY_LOGE("Failed to lookup %{public}s function: %s", LIB_GFX_FUNC_INIT, dlerror());
         dlclose(mGfxModule);
@@ -71,7 +75,7 @@ int32_t HdiGfxComposition::GfxModuleDeinit(void)
     int32_t ret = DISPLAY_SUCCESS;
     if (mGfxModule == nullptr) {
         using DeinitFunc = int32_t (*)(GfxFuncs *funcs);
-        DeinitFunc func = reinterpret_cast<DeinitFunc>(dlsym(mGfxModule, LIB_GFX_FUNC_DEINIT));
+        DeinitFunc func = (int32_t (*)(GfxFuncs *funcs))(dlsym(mGfxModule, LIB_GFX_FUNC_DEINIT));
         if (func == nullptr) {
             DISPLAY_LOGE("Failed to lookup %{public}s function: %s", LIB_GFX_FUNC_DEINIT, dlerror());
         } else {
@@ -122,8 +126,8 @@ void HdiGfxComposition::InitGfxSurface(ISurface &surface, HdiLayerBuffer &buffer
     surface.bAlphaMax255 = true;
     surface.alpha0 = 0XFF;
     surface.alpha1 = 0XFF;
-    DISPLAY_LOGD("surface w:%{public}d h:%{public}d addr:0x%{public}" PRIx64 " fmt:%{public}d stride:%{public}d",
-        surface.width, surface.height, surface.phyAddr, surface.enColorFmt, surface.stride);
+    DISPLAY_LOGD("surface w:%{public}d h:%{public}d fmt:%{public}d stride:%{public}d",
+        surface.width, surface.height, surface.enColorFmt, surface.stride);
 }
 
 // now not handle the alpha of layer
@@ -194,6 +198,8 @@ int32_t HdiGfxComposition::Apply(bool modeSet)
                 ret = BlitLayer(*layer, *mClientLayer);
                 DISPLAY_CHK_RETURN((ret != DISPLAY_SUCCESS), DISPLAY_FAILURE,
                     DISPLAY_LOGE("blit layer %{public}d failed ", i));
+                break;
+            case COMPOSITION_CLIENT:
                 break;
             default:
                 DISPLAY_LOGE("the gfx composition can not surpport the type %{public}d", compType);
