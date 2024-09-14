@@ -15,7 +15,7 @@
 
 #include "display_buffer_vdi_impl.h"
 #include "cinttypes"
-#include "display_common.h"
+#include "display_log.h"
 #include "display_gralloc_gbm.h"
 #include "hdf_base.h"
 #include "v1_0/display_composer_type.h"

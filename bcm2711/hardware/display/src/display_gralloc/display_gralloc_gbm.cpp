@@ -31,7 +31,7 @@
 #include "hi_gbm.h"
 #include "hdf_dlist.h"
 #include "display_gralloc_private.h"
-#include "display_common.h"
+#include "display_log.h"
 #include "v1_0/display_composer_type.h"
 
 namespace OHOS {
