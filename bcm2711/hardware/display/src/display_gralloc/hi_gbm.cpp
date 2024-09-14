@@ -22,7 +22,7 @@
 #include <xf86drmMode.h>
 #include <drm_fourcc.h>
 #include <securec.h>
-#include "display_common.h"
+#include "display_log.h"
 #include "hi_gbm_internal.h"
 
 namespace OHOS {

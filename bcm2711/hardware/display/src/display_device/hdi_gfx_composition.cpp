@@ -17,10 +17,9 @@
 #include <cinttypes>
 #include <dlfcn.h>
 #include <cerrno>
-#include "display_common.h"
+#include "display_log.h"
 #include "display_gfx.h"
 #include "hitrace_meter.h"
-#include "display_buffer_vdi_impl.h"
 #include "v1_0/display_composer_type.h"
 
 using namespace OHOS::HDI::Display::Composer::V1_0;
@@ -38,23 +37,18 @@ int32_t HdiGfxComposition::Init(void)
     }
     ret = mGfxFuncs->InitGfx();
     DISPLAY_CHK_RETURN((ret != DISPLAY_SUCCESS), DISPLAY_FAILURE, DISPLAY_LOGE("gfx init failed"));
-    if (ret != DISPLAY_SUCCESS) {
-        DISPLAY_LOGE("Failed to init gfx will use client composition always");
-        return DISPLAY_SUCCESS;
-    }
-    valid_ = true;
     return DISPLAY_SUCCESS;
 }
 
 int32_t HdiGfxComposition::GfxModuleInit(void)
 {
     DISPLAY_LOGD();
-    mGfxModule = dlopen(LIB_HDI_GFX_NAME, RTLD_NOW | RTLD_NOLOAD);
+    mGfxModule = dlopen("libdisplay_gfx.z.so", RTLD_NOW | RTLD_NOLOAD);
     if (mGfxModule != nullptr) {
-        DISPLAY_LOGI("Module '%{public}s' already loaded", LIB_HDI_GFX_NAME);
+        DISPLAY_LOGI("Module '%{public}s' already loaded", "libdisplay_gfx.z.so");
     } else {
-        DISPLAY_LOGI("Loading module '%{public}s'", LIB_HDI_GFX_NAME);
-        mGfxModule = dlopen(LIB_HDI_GFX_NAME, RTLD_NOW);
+        DISPLAY_LOGI("Loading module '%{public}s'", "libdisplay_gfx.z.so");
+        mGfxModule = dlopen("libdisplay_gfx.z.so", RTLD_NOW);
         if (mGfxModule == nullptr) {
             DISPLAY_LOGE("Failed to load module: %{public}s", dlerror());
             return DISPLAY_FAILURE;
@@ -62,9 +56,9 @@ int32_t HdiGfxComposition::GfxModuleInit(void)
     }
 
     using InitFunc = int32_t (*)(GfxFuncs **funcs);
-    InitFunc func = (int32_t (*)(GfxFuncs **funcs))(dlsym(mGfxModule, LIB_GFX_FUNC_INIT));
+    InitFunc func = reinterpret_cast<InitFunc>(dlsym(mGfxModule, "GfxInitialize"));
     if (func == nullptr) {
-        DISPLAY_LOGE("Failed to lookup %{public}s function: %s", LIB_GFX_FUNC_INIT, dlerror());
+        DISPLAY_LOGE("Failed to lookup %{public}s function: %s", "GfxInitialize", dlerror());
         dlclose(mGfxModule);
         return DISPLAY_FAILURE;
     }
@@ -77,9 +71,9 @@ int32_t HdiGfxComposition::GfxModuleDeinit(void)
     int32_t ret = DISPLAY_SUCCESS;
     if (mGfxModule == nullptr) {
         using DeinitFunc = int32_t (*)(GfxFuncs *funcs);
-        DeinitFunc func = (int32_t (*)(GfxFuncs *funcs))(dlsym(mGfxModule, LIB_GFX_FUNC_DEINIT));
+        DeinitFunc func = reinterpret_cast<DeinitFunc>(dlsym(mGfxModule, "GfxUninitialize"));
         if (func == nullptr) {
-            DISPLAY_LOGE("Failed to lookup %{public}s function: %s", LIB_GFX_FUNC_DEINIT, dlerror());
+            DISPLAY_LOGE("Failed to lookup %{public}s function: %s", "GfxUninitialize", dlerror());
         } else {
             ret = func(mGfxFuncs);
         }
@@ -93,6 +87,23 @@ bool HdiGfxComposition::CanHandle(HdiLayer &hdiLayer)
     DISPLAY_LOGD();
     (void)hdiLayer;
     return true;
+}
+
+bool HdiGfxComposition::UseCompositionClient(std::vector<HdiLayer *> &layers)
+{
+    const int32_t MAX_LAYER_COUNT = 4;
+    int32_t layerCount = 0;
+    bool hasCompositionClient = false;
+
+    for (auto &layer : layers) {
+        if (!CanHandle(*layer)) {
+            continue;
+        }
+        CompositionType type = layer->GetCompositionType();
+        layerCount += (type != COMPOSITION_VIDEO) && (type != COMPOSITION_CURSOR);
+        hasCompositionClient = hasCompositionClient || (type == COMPOSITION_CLIENT);
+    }
+    return hasCompositionClient || (layerCount > MAX_LAYER_COUNT);
 }
 
 int32_t HdiGfxComposition::SetLayers(std::vector<HdiLayer *> &layers, HdiLayer &clientLayer)
@@ -118,19 +129,21 @@ int32_t HdiGfxComposition::SetLayers(std::vector<HdiLayer *> &layers, HdiLayer &
     return DISPLAY_SUCCESS;
 }
 
-void HdiGfxComposition::InitGfxSurface(ISurface &surface, HdiLayerBuffer &buffer)
+void HdiGfxComposition::InitGfxSurface(ISurface &iSurface, HdiLayerBuffer &buffer)
 {
-    surface.width = buffer.GetWidth();
-    surface.height = buffer.GetHeight();
-    surface.phyAddr = buffer.GetMemHandle();
-    surface.enColorFmt = (PixelFormat)buffer.GetFormat();
-    surface.stride = buffer.GetStride();
-    surface.bAlphaExt1555 = true;
-    surface.bAlphaMax255 = true;
-    surface.alpha0 = 0XFF;
-    surface.alpha1 = 0XFF;
-    DISPLAY_LOGD("surface w:%{public}d h:%{public}d fmt:%{public}d stride:%{public}d",
-        surface.width, surface.height, surface.enColorFmt, surface.stride);
+    iSurface.width = buffer.GetWight();
+    iSurface.height = buffer.GetHeight();
+    iSurface.phyAddr = buffer.GetFb(); // buffer.GetPhysicalAddr();
+    iSurface.enColorFmt = (PixelFormat)buffer.GetFormat();
+    iSurface.stride = buffer.GetStride();
+    iSurface.bAlphaExt1555 = true;
+    iSurface.bAlphaMax255 = true;
+    iSurface.alpha0 = 0XFF;
+    iSurface.alpha1 = 0XFF;
+    DISPLAY_LOGD("iSurface fd %{public}d w:%{public}d h:%{public}d addr:0x%{public}" \
+        PRIx64 " fmt:%{public}d stride:%{public}d",
+        buffer.GetFb(), iSurface.width, iSurface.height,
+        buffer.GetPhysicalAddr(), iSurface.enColorFmt, iSurface.stride);
 }
 
 // now not handle the alpha of layer
@@ -139,15 +152,18 @@ int32_t HdiGfxComposition::BlitLayer(HdiLayer &src, HdiLayer &dst)
     ISurface srcSurface = { 0 };
     ISurface dstSurface = { 0 };
     GfxOpt opt = { 0 };
+    StartTrace(HITRACE_TAG_HDF, "HDI:DISP:WaitAcquireFence");
+    src.WaitAcquireFence();
+    FinishTrace(HITRACE_TAG_HDF);
     DISPLAY_LOGD();
     HdiLayerBuffer *srcBuffer = src.GetCurrentBuffer();
     DISPLAY_CHK_RETURN((srcBuffer == nullptr), DISPLAY_NULL_PTR, DISPLAY_LOGE("the srcbuffer is null"));
-    DISPLAY_LOGD("init the src surface");
+    DISPLAY_LOGD("init the src iSurface");
     InitGfxSurface(srcSurface, *srcBuffer);
 
     HdiLayerBuffer *dstBuffer = dst.GetCurrentBuffer();
     DISPLAY_CHK_RETURN((dstBuffer == nullptr), DISPLAY_FAILURE, DISPLAY_LOGE("can not get client layer buffer"));
-    DISPLAY_LOGD("init the dst surface");
+    DISPLAY_LOGD("init the dst iSurface");
     InitGfxSurface(dstSurface, *dstBuffer);
 
     opt.blendType = src.GetLayerBlenType();
@@ -165,8 +181,8 @@ int32_t HdiGfxComposition::BlitLayer(HdiLayer &src, HdiLayer &dst)
     IRect crop = src.GetLayerCrop();
     IRect displayRect = src.GetLayerDisplayRect();
     DISPLAY_LOGD("crop x: %{public}d y : %{public}d w : %{public}d h: %{public}d", crop.x, crop.y, crop.w, crop.h);
-    DISPLAY_LOGD("displayRect x: %{public}d y : %{public}d w : %{public}d h : %{public}d", displayRect.x, displayRect.y,
-        displayRect.w, displayRect.h);
+    DISPLAY_LOGD("displayRect x: %{public}d y : %{public}d w : %{public}d h : %{public}d",
+        displayRect.x, displayRect.y, displayRect.w, displayRect.h);
     DISPLAY_CHK_RETURN(mGfxFuncs == nullptr, DISPLAY_FAILURE, DISPLAY_LOGE("Blit: mGfxFuncs is null"));
     return mGfxFuncs->Blit(&srcSurface, &crop, &dstSurface, &displayRect, &opt);
 }
@@ -188,11 +204,10 @@ int32_t HdiGfxComposition::Apply(bool modeSet)
 {
     StartTrace(HITRACE_TAG_HDF, "HDI:DISP:Apply");
     int32_t ret;
-    static std::shared_ptr<IDisplayBufferVdi> g_buffer = nullptr;
     DISPLAY_LOGD("composer layers size %{public}zd", mCompLayers.size());
     for (uint32_t i = 0; i < mCompLayers.size(); i++) {
         HdiLayer *layer = mCompLayers[i];
-        CompositionType compType = layer->GetDeviceSelect();
+        CompositionType compType = layer->GetCompositionType();
         switch (compType) {
             case COMPOSITION_VIDEO:
                 ret = ClearRect(*layer, *mClientLayer);
@@ -200,34 +215,9 @@ int32_t HdiGfxComposition::Apply(bool modeSet)
                     DISPLAY_LOGE("clear layer %{public}d failed", i));
                 break;
             case COMPOSITION_DEVICE:
-                // ret = BlitLayer(*layer, *mClientLayer);
-                // DISPLAY_CHK_RETURN((ret != DISPLAY_SUCCESS), DISPLAY_FAILURE,
-                //     DISPLAY_LOGE("blit layer %{public}d failed ", i));
-                {
-                    if (g_buffer== nullptr) {
-                        IDisplayBufferVdi* dispBuf = new DisplayBufferVdiImpl();
-                        DISPLAY_CHK_RETURN((dispBuf == nullptr), DISPLAY_FAILURE, DISPLAY_LOGE("map dispBuf init failed"));
-                        g_buffer.reset(dispBuf);
-                        DISPLAY_LOGD("map new DisplayBufferVdiImpl");
-                    }
-                    char *clientBuff = (char *)g_buffer->Mmap(mClientLayer->GetCurrentBuffer()->mHandle);
-                    if(clientBuff) {
-                        DISPLAY_LOGD("map in int");
-                        HdiLayerBuffer *hdiLayer = layer->GetCurrentBuffer();
-                        char *layerBuff = (char *)g_buffer->Mmap(hdiLayer->mHandle);
-                        for(int y = 0; y < hdiLayer->GetHeight(); y++) {
-                            memcpy(&clientBuff[mClientLayer->GetCurrentBuffer()->GetStride() * 
-                            (y + layer->GetLayerDisplayRect().y) + layer->GetLayerDisplayRect().x * 4],
-                            (char *)(&layerBuff[hdiLayer->GetStride() * y]), hdiLayer->GetStride());
-                        }
-                        g_buffer->Unmap(hdiLayer->mHandle);
-                        g_buffer->Unmap(mClientLayer->GetCurrentBuffer()->mHandle);
-                    } else {
-                        DISPLAY_LOGD("map in err");
-                    }
-                }
-                break;
-            case COMPOSITION_CLIENT:
+                ret = BlitLayer(*layer, *mClientLayer);
+                DISPLAY_CHK_RETURN((ret != DISPLAY_SUCCESS), DISPLAY_FAILURE,
+                    DISPLAY_LOGE("blit layer %{public}d failed ", i));
                 break;
             default:
                 DISPLAY_LOGE("the gfx composition can not surpport the type %{public}d", compType);
